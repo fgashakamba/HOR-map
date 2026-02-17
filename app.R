@@ -1,5 +1,5 @@
 # ================================================================================
-# LIV Multi-Purpose Interactive Map (bindEvent Syntax + Composite Key Fix)
+# HOR Multi-Purpose Interactive Map 
 # ================================================================================
 
 # 1. Load required packages
@@ -13,7 +13,7 @@ pacman::p_load(
 # 2. Global Data Loading & Processing
 # ==================================
 tryCatch({
-  # Adjust paths as necessary for your folder structure
+  # Adjust paths as necessary for the folder structure
   lakes     <- st_read(file.path(getwd(), "data_wgs84/RW_lakes.gpkg"), quiet = TRUE)
   np        <- st_read(file.path(getwd(), "data_wgs84/RW_national_parks.gpkg"), quiet = TRUE)
   country   <- st_read(file.path(getwd(), "data_wgs84/RW_country.gpkg"), quiet = TRUE)
@@ -45,7 +45,7 @@ ui <- fluidPage(
   fluidRow(
     column(12,
            div(class = "title-panel p-3 mb-3 bg-primary text-white",
-               h2("LIV Interactive Map")
+               h2("HOR Interactive Map")
            )
     )
   ),
@@ -60,7 +60,7 @@ ui <- fluidPage(
              
              shinyWidgets::radioGroupButtons(
                inputId = "data_type",
-               label = "Choose Data Type:",
+               label = "Data Type:",
                choices = c("Nominal" = "nominal", 
                            "Quantitative" = "quantitative"),
                selected = "nominal",
@@ -76,6 +76,18 @@ ui <- fluidPage(
                textInput("legend_title_input", "Legend Title:", value = "Value")
              ),
              
+             conditionalPanel(
+               condition = "input.data_type == 'nominal'",
+               shinyWidgets::colorPickr(
+                 inputId  = "nominal_color",
+                 label    = "Highlight Color:",
+                 selected = "#67724D",
+                 swatches = c("#67724D", "#E74C3C", "#3498DB", "#2ECC71", "#F39C12", "#9B59B6"),
+                 update   = "save",
+                 theme    = "nano"
+               )
+             ),
+             
              hr(),
              h4("2. Select Location"),
              p(class="text-muted", style="font-size:0.9em;", 
@@ -86,7 +98,22 @@ ui <- fluidPage(
                             choices = sort(unique(sectors$district)), 
                             multiple = FALSE),
              
-             uiOutput("sector_selector_ui")
+             uiOutput("sector_selector_ui"),
+             # basemap would normally be under "settings" but it makes to put it below other important inputs
+             hr(),
+             selectInput(
+               inputId  = "basemap",
+               label    = "Basemap:",
+               choices  = c(
+                 "Positron (Light)"    = "CartoDB.Positron",
+                 "Dark Matter"         = "CartoDB.DarkMatter",
+                 "OpenStreetMap"       = "OpenStreetMap",
+                 "Satellite (Esri)"    = "Esri.WorldImagery",
+                 "Topo (Esri)"         = "Esri.WorldTopoMap",
+                 "Terrain (Stadia)"    = "Stadia.StamenTerrain"
+               ),
+               selected = "CartoDB.Positron"
+             )
            )
     ),
     
@@ -246,7 +273,7 @@ server <- function(input, output, session) {
   observe({
     screenshot(
       selector = "#map_container",
-      filename = paste0("liv_map_", format(Sys.time(), "%Y%m%d_%H%M%S")),
+      filename = paste0("HOR_map_", format(Sys.time(), "%Y%m%d_%H%M%S")),
       scale = 2
     )
   }) %>% 
@@ -258,11 +285,20 @@ server <- function(input, output, session) {
   })
   
   # --- D. Map Rendering & Updates ---
+  
+  # Swap basemap tiles without re-rendering the whole map
+  observe({
+    leafletProxy("map") %>%
+      clearTiles() %>%
+      addProviderTiles(input$basemap)
+  }) %>%
+    bindEvent(input$basemap)
+  
   output$map <- renderLeaflet({
     bbox <- st_bbox(country)
     
     leaflet() %>%
-      addProviderTiles(providers$CartoDB.Positron) %>% 
+      addProviderTiles(isolate(input$basemap) %||% "CartoDB.Positron") %>% 
       addPolygons(
         data = np,
         fillColor = "#085e27", color = "#085e27", weight = 1, fillOpacity = 0.6,
@@ -311,8 +347,8 @@ server <- function(input, output, session) {
             title = input$legend_title_input, position = "bottomright", opacity = 0.7
           )
       } else {
-        pal <- colorFactor(palette = "Set2", domain = processed_sf$user_value) 
-        fill_col <- pal(processed_sf$user_value)
+        # Nominal: all selected sectors share one highlight color
+        fill_col <- input$nominal_color %||% "#67724D"
       }
       
       # --- DRAW POLYGONS ---
@@ -320,7 +356,12 @@ server <- function(input, output, session) {
         addPolygons(
           group = "selected_sectors",
           fillColor = fill_col, fillOpacity = 0.7, color = "white", weight = 1,
-          popup = ~paste0("<b>", name, " (", district, ")</b>: ", user_value)
+          popup = ~paste0("<b>", name, " (", district, ")</b>: ", user_value),
+          label = ~lapply(paste0("<b>", name, " (", district, ")</b>: ", user_value), htmltools::HTML),
+          labelOptions = labelOptions(
+            style = list("font-weight" = "normal", "padding" = "4px 8px"),
+            textsize = "13px", direction = "auto"
+          )
         )
       
       # --- DRAW LABELS ---
