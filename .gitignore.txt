@@ -1,2 +1,4 @@
 .Rhistory
 .RData
+sample_data_avo_25A.csv
+Sector_names_check.R
