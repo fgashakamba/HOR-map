@@ -10,6 +10,12 @@ pacman::p_load(
   shinyscreenshot, shinyWidgets, janitor
 )
 
+# Claude told me to add this for this app to work in Shiny Server
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
+if (file.exists(".Renviron")) readRenviron(".Renviron")
+source(file.path("R", "basemaps.R"), local = TRUE)
+
 # 2. Global Data Loading & Processing
 # ==================================
 tryCatch({
@@ -621,14 +627,14 @@ server <- function(input, output, session) {
   observe({
     leafletProxy("map") %>%
       clearTiles() %>%
-      addProviderTiles(input$basemap)
+      add_basemap_tiles(input$basemap)
   }) %>%
     bindEvent(input$basemap)
   
   output$map <- renderLeaflet({
     bbox <- st_bbox(country)
     leaflet() %>%
-      addProviderTiles(isolate(input$basemap) %||% "CartoDB.Positron") %>%
+      add_basemap_tiles(isolate(input$basemap) %||% "CartoDB.Positron") %>%
       addPolygons(
         data = np,
         fillColor = "#085e27", color = "#085e27", weight = 1, fillOpacity = 0.6,
