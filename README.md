@@ -22,8 +22,9 @@ Reference: [CARTO basemap instructions](https://github.com/CartoDB/basemap-style
 App URL: <https://geodashlabs.com/hormap/>
 
 Deploy `app.R` and `R/basemaps.R` to `/srv/shiny-server/hormap/`, alongside the
-existing `data_wgs84/` directory and the private `.Renviron`. Shiny Server loads
-the updated app for new sessions.
+existing `data_wgs84/` directory and the private `.Renviron`. Run
+`touch /srv/shiny-server/hormap/restart.txt` after deployment so Shiny Server
+loads the updated app for new sessions.
 
 `deploy/nginx-hormap.conf` records the hormap routes in
 `/etc/nginx/sites-available/geodashlabs.com`. The app uses the existing

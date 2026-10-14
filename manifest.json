@@ -3199,7 +3199,10 @@
       "checksum": "5da64c57b4557118c7a2da69c441171d"
     },
     "app.R": {
-      "checksum": "cd92d207ad9f807895385db31d757587"
+      "checksum": "717b3bfd67b0f8819fca4c0b3cc007fa"
+    },
+    "R/basemaps.R": {
+      "checksum": "b5dd0641c66a89fc108039e206ff4a43"
     },
     "data_wgs84/RW_country.gpkg": {
       "checksum": "98522f6a16e998f5b0b696e40f716da5"
